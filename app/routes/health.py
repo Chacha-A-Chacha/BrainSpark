@@ -4,11 +4,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.config import settings
 from app.db.session import get_db
-from app.dependencies import get_voter_hash
 
 router = APIRouter(tags=["System Health"])
+
 
 @router.get("/health", summary="System Health Check")
 async def health_check(db: AsyncSession = Depends(get_db)):
@@ -20,7 +20,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     try:
         # Check database connection
         await db.execute(text("SELECT 1"))
-        
+
         return JSONResponse(
             status_code=200,
             content={
@@ -47,6 +47,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             }
         )
 
+
 @router.get("/settings", include_in_schema=False)
 async def show_settings():
     """Display non-sensitive configuration values (for debugging)"""
@@ -61,10 +62,12 @@ async def show_settings():
         }
     }
 
+
 @router.get("/readyz", tags=["System Health"])
 async def readiness_probe():
     """Kubernetes-style readiness probe"""
     return PlainTextResponse("OK")
+
 
 @router.get("/livez", tags=["System Health"])
 async def liveness_probe():

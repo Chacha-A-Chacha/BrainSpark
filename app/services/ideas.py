@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from typing import Tuple
 
+
 class IdeaService:
     def __init__(self, db: Session):
         self.db = db
@@ -91,11 +92,11 @@ class IdeaService:
             )
 
     def get_approved_ideas(
-        self,
-        category: Optional[str] = None,
-        sort: str = 'recent',
-        page: int = 1,
-        per_page: int = 20
+            self,
+            category: Optional[str] = None,
+            sort: str = 'recent',
+            page: int = 1,
+            per_page: int = 20
     ) -> List[Idea]:
         query = self.db.query(Idea).filter(Idea.status == 'approved')
 
@@ -115,11 +116,10 @@ class IdeaService:
         idea = self.db.query(Idea).get(idea_id)
         if not idea:
             raise HTTPException(status_code=404, detail="Idea not found")
-        
+
         if status not in ['approved', 'rejected']:
             raise HTTPException(status_code=400, detail="Invalid status")
 
         idea.status = status
         self.db.commit()
         return idea
-    

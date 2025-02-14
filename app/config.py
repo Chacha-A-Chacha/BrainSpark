@@ -1,5 +1,5 @@
 # app/config.py
-from pydantic import PostgresDsn, field_validator
+from pydantic import MySQLDsn, field_validator, FieldValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 import logging
@@ -19,15 +19,23 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = ENVIRONMENT == "development"
 
-    # Database Configuration (PostgreSQL focused)
-    DATABASE_URL: PostgresDsn = "postgresql+asyncpg://user:pass@localhost:5432/ideahub"
+    # Database Configuration (MySQL focused)
+    DATABASE_URL: MySQLDsn = "mysql+aiomysql://user:pass@localhost:3306/ideahub_db"
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
 
     @field_validator("DATABASE_URL")
-    def validate_db_url(cls, v):
-        if "postgresql" not in v:
-            raise ValueError("Only PostgreSQL is supported")
+    def validate_db_url(cls, v: str, info: FieldValidationInfo):
+        if "mysql" not in v:
+            raise ValueError("Only MySQL/MariaDB is supported")
+
+        if "@localhost" in v and info.data.get("ENVIRONMENT") == "production":
+            logger.warning("Using default localhost database in production!")
+
+        # Add SSL requirement for production
+        if info.data.get("ENVIRONMENT") == "production" and "ssl_ca" not in v:
+            raise ValueError("Production database requires SSL configuration")
+
         return v
 
     # Security
@@ -61,5 +69,6 @@ def get_settings() -> Settings:
     settings = Settings()
     logger.info(f"Loaded settings for {settings.ENVIRONMENT} environment")
     return settings
+
 
 settings = get_settings()
