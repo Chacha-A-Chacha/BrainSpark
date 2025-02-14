@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Integer, Enum, UUID, ForeignKey, Index, CheckConstraint, func
+from sqlalchemy import Column, String, Boolean, Integer, Enum, UUID, ForeignKey, Index, CheckConstraint, func, DateTime
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID, TEXT
 from sqlalchemy.orm import Session, relationship
 from sqlalchemy.sql import expression
@@ -7,9 +7,12 @@ from datetime import datetime
 from typing import Optional, List
 import re
 
+from app.db.session import Base
+
+
 class Idea(Base):
     __tablename__ = "ideas"
-    
+
     id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     title = Column(String(200), nullable=False, index=True)
     slug = Column(String(220), unique=True, nullable=False)
@@ -17,8 +20,8 @@ class Idea(Base):
     details = Column(TEXT, nullable=False)
     category = Column(Enum('industry', 'technology', 'problem_area', name='category_enum'), nullable=False)
     is_new = Column(Boolean, nullable=False)
-    status = Column(Enum('pending', 'approved', 'rejected', name='status_enum'), 
-                  default='pending', index=True)
+    status = Column(Enum('pending', 'approved', 'rejected', name='status_enum'),
+                    default='pending', index=True)
     submitted_by = Column(String(100), nullable=False)
     upvotes = Column(Integer, default=0, nullable=False)
     downvotes = Column(Integer, default=0, nullable=False)
@@ -42,9 +45,10 @@ class Idea(Base):
         slug = re.sub(r'[-\s]+', '-', base).strip('-')
         return f"{slug}-{uuid4().hex[:6]}"
 
+
 class Vote(Base):
     __tablename__ = "votes"
-    
+
     idea_id = Column(PG_UUID(as_uuid=True), ForeignKey('ideas.id', ondelete='CASCADE'), primary_key=True)
     voter_hash = Column(String(64), primary_key=True)
     vote_type = Column(Enum('upvote', 'downvote', name='vote_enum'), nullable=False)
@@ -55,4 +59,3 @@ class Vote(Base):
     __table_args__ = (
         Index('ix_vote_voter', 'voter_hash', postgresql_using='hash'),
     )
-    

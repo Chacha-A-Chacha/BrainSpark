@@ -1,15 +1,15 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.config import Settings
+from app.config import settings
 
 Base = declarative_base()
 
-# Configure database engine
+# Async MySQL engine
 engine = create_async_engine(
-    Settings.DATABASE_URL,
-    pool_size=Settings.DB_POOL_SIZE,
-    max_overflow=Settings.DB_MAX_OVERFLOW,
-    echo=Settings.DEBUG  # Log SQL in development
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
 )
 
 # Create session factory
@@ -17,12 +17,11 @@ AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autoflush=False
 )
 
 
-async def create_db_tables():
-    """Initialize database schema"""
+async def init_db():
+    """Initialize database connection and create tables"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
