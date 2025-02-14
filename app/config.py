@@ -8,6 +8,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
 class Settings(BaseSettings):
     # Application Metadata
     PROJECT_NAME: str = "IdeaHub MVP"
@@ -53,6 +54,7 @@ class Settings(BaseSettings):
         case_sensitive=True,
         env_file_encoding="utf-8"
     )
+
 
 @lru_cache
 def get_settings() -> Settings:
