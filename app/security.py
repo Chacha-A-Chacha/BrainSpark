@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, validator
 from typing import Optional, Callable
-from app.core.config import settings
+from app.config import settings
 
 # Rate limiter instance
 limiter = Limiter(key_func=get_remote_address)

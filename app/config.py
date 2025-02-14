@@ -61,3 +61,5 @@ def get_settings() -> Settings:
     settings = Settings()
     logger.info(f"Loaded settings for {settings.ENVIRONMENT} environment")
     return settings
+
+settings = get_settings()

@@ -14,7 +14,7 @@ from .dependencies import (
 )
 from app.services.ideas import IdeaService
 from app.db.models import Idea
-from app.core.config import settings
+from app.config import settings
 
 router = APIRouter(tags=["Ideas"])
 
