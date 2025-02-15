@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 from fastapi.responses import JSONResponse
 from uuid import UUID
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, ValidationError
 from slowapi import Limiter
 
 from app.dependencies import (
@@ -15,43 +15,19 @@ from app.dependencies import (
     get_idea_service
 )
 from app.services.ideas import IdeaService
+from app.schemas.idea import IdeaCreate, IdeaResponse, VoteRequest
 from app.models import Idea
 from app.config import settings
 from app.utils.names import generate_animal_name
 
 import os
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Ideas"])
 
-
-# --- Schemas ---
-class IdeaCreate(BaseModel):
-    title: str
-    summary: str
-    details: str
-    category: str
-    is_new: bool
-
-
-class IdeaResponse(BaseModel):
-    id: str
-    title: str
-    summary: str
-    category: str
-    is_new: bool
-    submitted_by: str
-    upvotes: int
-    downvotes: int
-    created_at: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VoteRequest(BaseModel):
-    vote_type: str
-
-
-# --- Routes ---
 # Modify the decorator to handle migrations
 def submission_rate_limit_decorator(func):
     # If running in migration context, skip rate limiting
@@ -62,7 +38,6 @@ def submission_rate_limit_decorator(func):
     from app.dependencies import submission_limiter
     return submission_limiter.limit(settings.SUBMISSION_RATE_LIMIT)(func)
 
-
 # Similarly for voting
 def voting_rate_limit_decorator(func):
     # If running in migration context, skip rate limiting
@@ -72,7 +47,6 @@ def voting_rate_limit_decorator(func):
     # Otherwise, apply the rate limit
     from app.dependencies import voting_limiter
     return voting_limiter.limit(settings.VOTING_RATE_LIMIT)(func)
-
 
 @router.post(
     "/ideas",
@@ -88,22 +62,50 @@ async def submit_idea(
         service: IdeaService = Depends(get_idea_service)
 ):
     """Submit a new idea (CAPTCHA protected)"""
-    # Rate limiting is now handled by the decorator
-
     try:
+        # Log the received data for debugging
+        logger.info(f"Received idea data: {idea_data}")
+
+        # Convert to dictionary, ensuring string values
+        idea_dict = {
+            'title': idea_data.title,
+            'summary': idea_data.summary,
+            'details': idea_data.details,
+            'category': idea_data.category,
+            'is_new': idea_data.is_new
+        }
+
         idea = service.submit_idea(
-            idea_data.dict(),
+            idea_dict,
             submitted_by=generate_animal_name()
         )
         return idea
+    except ValidationError as ve:
+        # Log the validation error details
+        logger.error(f"Validation Error: {ve}")
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "detail": "Invalid input data",
+                "errors": ve.errors()
+            }
+        )
     except HTTPException as e:
+        # Log the HTTP exception
+        logger.error(f"HTTP Exception: {e.detail}")
         raise e
     except Exception as e:
+        # Log the full traceback for server-side errors
+        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(traceback.format_exc())
+
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error"}
+            content={
+                "detail": "An unexpected error occurred",
+                "error_message": str(e)
+            }
         )
-
 
 @router.post(
     "/ideas/{idea_id}/vote"
@@ -131,13 +133,18 @@ async def vote_idea(
             "downvotes": downvotes
         }
     except HTTPException as e:
+        # Log the HTTP exception
+        logger.error(f"HTTP Exception: {e.detail}")
         raise e
     except Exception as e:
+        # Log the full traceback for server-side errors
+        logger.error(f"Unexpected error: {str(e)}")
+        logger.error(traceback.format_exc())
+
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Voting failed"}
         )
-
 
 @router.get("/ideas", response_model=List[IdeaResponse])
 async def get_ideas(
@@ -157,7 +164,12 @@ async def get_ideas(
         )
         return ideas
     except Exception as e:
+        logger.error(f"Error fetching ideas: {str(e)}")
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": "Invalid request parameters"}
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "detail": "An unexpected error occurred",
+                "error_message": str(e)
+            }
         )
+    
