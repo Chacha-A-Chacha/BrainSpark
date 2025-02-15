@@ -5,6 +5,10 @@ from functools import lru_cache
 import logging
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

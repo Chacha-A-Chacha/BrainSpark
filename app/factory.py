@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
-from app.config import Settings
+from app.config import settings
 from app.db.session import init_db as create_db_tables, get_db
 from app.routes import core, admin, health
 import logging
@@ -34,9 +34,9 @@ def create_app() -> FastAPI:
     setup_basic_logging()
 
     app = FastAPI(
-        title=Settings.PROJECT_NAME,
-        description=Settings.DESCRIPTION,
-        version=Settings.VERSION,
+        title=settings.PROJECT_NAME,
+        description=settings.DESCRIPTION,
+        version=settings.VERSION,
         lifespan=lifespan,
         docs_url="/docs",
         redoc_url=None
@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
     # CORS Configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=Settings.cors_origins,
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -57,7 +57,10 @@ def create_app() -> FastAPI:
     app.include_router(admin.router, prefix="/api/admin")
 
     # Add metrics if enabled
-    if Settings.ENABLE_PROMETHEUS:
+    if settings.ENABLE_PROMETHEUS:
         Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
     return app
+
+
+app = create_app()

@@ -1,1 +1,3 @@
-# This file is intentionally left blank.
+from .session import Base
+
+__all__ = ['Base']

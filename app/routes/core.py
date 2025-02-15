@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from uuid import UUID
 from typing import Optional, List
 from pydantic import BaseModel
+from slowapi import Limiter
+
 from app.dependencies import (
     VoterHashDep,
     CaptchaDep,
@@ -15,6 +17,9 @@ from app.dependencies import (
 from app.services.ideas import IdeaService
 from app.models import Idea
 from app.config import settings
+from app.utils.names import generate_animal_name
+
+import os
 
 router = APIRouter(tags=["Ideas"])
 
@@ -40,7 +45,7 @@ class IdeaResponse(BaseModel):
     created_at: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # Updated from orm_mode
 
 
 class VoteRequest(BaseModel):
@@ -48,21 +53,44 @@ class VoteRequest(BaseModel):
 
 
 # --- Routes ---
+# Modify the decorator to handle migrations
+def submission_rate_limit_decorator(func):
+    # If running in migration context, skip rate limiting
+    if os.environ.get('RUNNING_MIGRATION'):
+        return func
+
+    # Otherwise, apply the rate limit
+    from app.dependencies import submission_limiter
+    return submission_limiter.limit(settings.SUBMISSION_RATE_LIMIT)(func)
+
+
+# Similarly for voting
+def voting_rate_limit_decorator(func):
+    # If running in migration context, skip rate limiting
+    if os.environ.get('RUNNING_MIGRATION'):
+        return func
+
+    # Otherwise, apply the rate limit
+    from app.dependencies import voting_limiter
+    return voting_limiter.limit(settings.VOTING_RATE_LIMIT)(func)
+
+
 @router.post(
     "/ideas",
     response_model=IdeaResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(CaptchaDep)]
 )
-@SubmissionLimitDep.limit(settings.SUBMISSION_RATE_LIMIT)
+@submission_rate_limit_decorator
 async def submit_idea(
         request: Request,
         idea_data: IdeaCreate,
         voter_hash: VoterHashDep,
         service: IdeaService = Depends(get_idea_service)
-
 ):
     """Submit a new idea (CAPTCHA protected)"""
+    # Rate limiting is now handled by the decorator
+
     try:
         idea = service.submit_idea(
             idea_data.dict(),
@@ -79,17 +107,19 @@ async def submit_idea(
 
 
 @router.post(
-    "/ideas/{idea_id}/vote",
-    dependencies=[Depends(VotingLimitDep.limit(settings.VOTING_RATE_LIMIT))]
+    "/ideas/{idea_id}/vote"
 )
+@voting_rate_limit_decorator
 async def vote_idea(
         idea_id: UUID,
         vote_data: VoteRequest,
+        request: Request,
         voter_hash: VoterHashDep,
         service: IdeaService = Depends(get_idea_service)
-
 ):
     """Vote on an approved idea"""
+    # Rate limiting is now handled by the decorator
+
     try:
         upvotes, downvotes = service.handle_vote(
             idea_id,
