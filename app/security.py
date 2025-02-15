@@ -16,10 +16,11 @@ from app.config import settings
 limiter = Limiter(key_func=get_remote_address)
 http_bearer = HTTPBearer(auto_error=False)
 
+
 class SecurityService:
     def __init__(self):
         self.recaptcha_url = "https://www.google.com/recaptcha/api/siteverify"
-        
+
     def get_voter_identifier(self, request: Request) -> str:
         """
         Generate a unique voter hash using IP, User-Agent, and secret pepper
@@ -27,7 +28,7 @@ class SecurityService:
         ip = request.client.host
         user_agent = request.headers.get("User-Agent", "")
         secret_pepper = settings.SECRET_KEY.encode()
-        
+
         digest = hashlib.pbkdf2_hmac(
             'sha256',
             f"{ip}-{user_agent}".encode(),
@@ -62,6 +63,7 @@ class SecurityService:
         identifier = self.get_voter_identifier(request)
         return identifier
 
+
 # Initialize security service
 security_service = SecurityService()
 
@@ -69,17 +71,20 @@ security_service = SecurityService()
 submission_limiter = Limiter(key_func=security_service.rate_limit_check)
 voting_limiter = Limiter(key_func=security_service.rate_limit_check)
 
+
 def input_sanitizer(field: str) -> str:
     """
     Sanitize user input to prevent XSS and injection attacks
     """
     cleaned = re.sub(r'<[^>]*>', '', field)  # Remove HTML tags
-    return cleaned.strip()[:500]  # Limit length
+    return cleaned.strip()[:2000]  # Limit length
+
 
 class SanitizedText(BaseModel):
     """
     Pydantic model with automatic input sanitization
     """
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
@@ -90,9 +95,10 @@ class SanitizedText(BaseModel):
             raise ValueError("Must be a string")
         return input_sanitizer(v)
 
+
 async def verify_captcha_dependency(
-    request: Request,
-    captcha_token: Optional[str] = None
+        request: Request,
+        captcha_token: Optional[str] = None
 ):
     """
     Dependency for CAPTCHA validation
@@ -103,16 +109,17 @@ async def verify_captcha_dependency(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="CAPTCHA token required"
             )
-            
+
         if not await security_service.validate_captcha(captcha_token):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid CAPTCHA verification"
             )
 
+
 async def rate_limit_exceeded_handler(
-    request: Request,
-    exc: RateLimitExceeded
+        request: Request,
+        exc: RateLimitExceeded
 ):
     """
     Custom rate limit exceeded response
@@ -122,6 +129,7 @@ async def rate_limit_exceeded_handler(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         detail="Too many requests. Please try again later."
     )
+
 
 def security_headers(request: Request, call_next):
     """

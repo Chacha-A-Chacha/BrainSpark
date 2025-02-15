@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, Depends, status, HTTPException
 from fastapi.responses import JSONResponse
 from uuid import UUID
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from slowapi import Limiter
 
 from app.dependencies import (
@@ -26,15 +26,15 @@ router = APIRouter(tags=["Ideas"])
 
 # --- Schemas ---
 class IdeaCreate(BaseModel):
-    title: SanitizedTextDep
-    summary: SanitizedTextDep
-    details: SanitizedTextDep
+    title: str
+    summary: str
+    details: str
     category: str
     is_new: bool
 
 
 class IdeaResponse(BaseModel):
-    id: UUID
+    id: str
     title: str
     summary: str
     category: str
@@ -44,8 +44,7 @@ class IdeaResponse(BaseModel):
     downvotes: int
     created_at: str
 
-    class Config:
-        from_attributes = True  # Updated from orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VoteRequest(BaseModel):

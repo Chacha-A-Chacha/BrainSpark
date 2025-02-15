@@ -5,6 +5,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
 from app.config import settings
 from app.db.session import init_db as create_db_tables, get_db
+from app.logging_config import configure_logging
 from app.routes import core, admin, health
 import logging
 
@@ -32,6 +33,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Core factory function for MVP"""
     setup_basic_logging()
+
+    configure_logging()
 
     app = FastAPI(
         title=settings.PROJECT_NAME,
