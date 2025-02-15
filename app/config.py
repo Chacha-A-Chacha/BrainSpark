@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DEBUG: bool = ENVIRONMENT == "development"
 
     # Database Configuration (MySQL focused)
-    DATABASE_URL: MySQLDsn = "mysql+aiomysql://user:pass@localhost:3306/ideahub_db"
+    DATABASE_URL: str = "mysql+aiomysql://user:pass@localhost:3306/ideahub_db"
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
 

@@ -3,6 +3,9 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 from typing import Tuple
 
+from app.models import Idea
+from app.models.idea import Vote
+
 
 class IdeaService:
     def __init__(self, db: Session):

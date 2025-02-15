@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
 from app.config import Settings
-from app.db.session import create_db_tables, get_db
+from app.db.session import init_db as create_db_tables, get_db
 from app.routes import core, admin, health
 import logging
 

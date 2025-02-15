@@ -58,8 +58,9 @@ class VoteRequest(BaseModel):
 async def submit_idea(
         request: Request,
         idea_data: IdeaCreate,
-        service: IdeaService = Depends(get_idea_service),
-        voter_hash: VoterHashDep
+        voter_hash: VoterHashDep,
+        service: IdeaService = Depends(get_idea_service)
+
 ):
     """Submit a new idea (CAPTCHA protected)"""
     try:
@@ -84,8 +85,9 @@ async def submit_idea(
 async def vote_idea(
         idea_id: UUID,
         vote_data: VoteRequest,
-        service: IdeaService = Depends(get_idea_service),
-        voter_hash: VoterHashDep
+        voter_hash: VoterHashDep,
+        service: IdeaService = Depends(get_idea_service)
+
 ):
     """Vote on an approved idea"""
     try:
