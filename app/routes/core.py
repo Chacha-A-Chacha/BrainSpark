@@ -16,7 +16,6 @@ from app.dependencies import (
 )
 from app.services.ideas import IdeaService
 from app.schemas.idea import IdeaCreate, IdeaResponse, VoteRequest
-from app.models import Idea
 from app.config import settings
 from app.utils.names import generate_animal_name
 
@@ -28,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Ideas"])
 
+
 # Modify the decorator to handle migrations
 def submission_rate_limit_decorator(func):
     # If running in migration context, skip rate limiting
@@ -37,6 +37,7 @@ def submission_rate_limit_decorator(func):
     # Otherwise, apply the rate limit
     from app.dependencies import submission_limiter
     return submission_limiter.limit(settings.SUBMISSION_RATE_LIMIT)(func)
+
 
 # Similarly for voting
 def voting_rate_limit_decorator(func):
@@ -48,11 +49,12 @@ def voting_rate_limit_decorator(func):
     from app.dependencies import voting_limiter
     return voting_limiter.limit(settings.VOTING_RATE_LIMIT)(func)
 
+
 @router.post(
     "/ideas",
     response_model=IdeaResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(CaptchaDep)]
+    # dependencies=[Depends(CaptchaDep)]
 )
 @submission_rate_limit_decorator
 async def submit_idea(
@@ -68,9 +70,9 @@ async def submit_idea(
 
         # Convert to dictionary, ensuring string values
         idea_dict = {
-            'title': idea_data.title,
-            'summary': idea_data.summary,
-            'details': idea_data.details,
+            'title': idea_data.extract_string_value(idea_data.title),
+            'summary': idea_data.extract_string_value(idea_data.summary),
+            'details': idea_data.extract_string_value(idea_data.details),
             'category': idea_data.category,
             'is_new': idea_data.is_new
         }
@@ -106,6 +108,7 @@ async def submit_idea(
                 "error_message": str(e)
             }
         )
+
 
 @router.post(
     "/ideas/{idea_id}/vote"
@@ -146,6 +149,7 @@ async def vote_idea(
             content={"detail": "Voting failed"}
         )
 
+
 @router.get("/ideas", response_model=List[IdeaResponse])
 async def get_ideas(
         category: Optional[str] = None,
@@ -172,4 +176,3 @@ async def get_ideas(
                 "error_message": str(e)
             }
         )
-    
